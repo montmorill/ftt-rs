@@ -1,49 +1,67 @@
-name: Build and Release
-
+name: build
 on:
-  push:
-    branches:
-      - main
-
+  workflow_dispatch: {}
 jobs:
   build:
-    runs-on: ubuntu-latest
+    name: build
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
+        build: [linux, macos, windows]
+        include:
+          - build: linux
+            os: ubuntu-18.04
+            rust: nightly
+            target: x86_64-unknown-linux-musl
+            archive-name: sgf-render-linux.tar.gz
+          - build: macos
+            os: macos-latest
+            rust: nightly
+            target: x86_64-apple-darwin
+            archive-name: sgf-render-macos.tar.gz
+          - build: windows
+            os: windows-2019
+            rust: nightly-x86_64-msvc
+            target: x86_64-pc-windows-msvc
+            archive-name: sgf-render-windows.7z
+      fail-fast: false
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-      - name: Set up Rust
-        uses: actions/setup-rust@v1
-
-      - name: Build
-        run: cargo build --release
-
-      - name: Archive executable
-        run: tar -czf my_executable.tar.gz target/release/my_executable
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
         with:
-          tag_name: v1.0.0
-          release_name: Release v1.0.0
-          body: |
-            Release v1.0.0
-          draft: false
-          prerelease: false
+          toolchain: ${{ matrix.rust }}
+          profile: minimal
+          override: true
+          target: ${{ matrix.target }}
 
-      - name: Upload Release Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
+      - name: Build binary
+        run: cargo build --verbose --release --target ${{ matrix.target }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUST_BACKTRACE: 1
+
+      - name: Strip binary (linux and macos)
+        if: matrix.build == 'linux' || matrix.build == 'macos'
+        run: strip "target/${{ matrix.target }}/release/sgf-render"
+
+      - name: Build archive
+        shell: bash
+        run: |
+          mkdir archive
+          cp LICENSE README.md archive/
+          cd archive
+          if [ "${{ matrix.build }}" = "windows" ]; then
+            cp "../target/${{ matrix.target }}/release/sgf-render.exe" ./
+            7z a "${{ matrix.archive-name }}" LICENSE README.md sgf-render.exe
+          else
+            cp "../target/${{ matrix.target }}/release/sgf-render" ./
+            tar -czf "${{ matrix.archive-name }}" LICENSE README.md sgf-render
+          fi
+      - name: Upload archive
+        uses: actions/upload-artifact@v1
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: my_executable.tar.gz
-          asset_name: my_executable.tar.gz
-          asset_content_type: application/zip
+          name: ${{ matrix.archive-name }}
+          path: archive/${{ matrix.archive-name }}
