@@ -25,10 +25,10 @@ impl Display for Block {
     #[allow(unused_must_use)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let (color, text) = match self {
-            Block::Wall => (AnsiColor::BrightWhite, "墙"),
-            Block::Piston => (AnsiColor::Green, "桥"),
-            Block::Sand => (AnsiColor::BrightYellow, "沙"),
-            Block::Cobweb => (AnsiColor::Magenta, "网"),
+            Block::Wall => (AnsiColor::BrightWhite, "[#]"),
+            Block::Piston => (AnsiColor::Green, "[*]"),
+            Block::Sand => (AnsiColor::BrightYellow, ":::"),
+            Block::Cobweb => (AnsiColor::Magenta, ">|<"),
         };
         let style = Style::new().fg_color(Some(Color::Ansi(color)));
         write!(f, "{style}{text}{style:#}")
@@ -56,12 +56,12 @@ impl Display for FttMap {
                     .bold()
                     .underline();
                 string += (if (row, column).eq(&self.player) {
-                    format!("{style}微{style:#}")
+                    format!("{style}YOU{style:#}")
                 } else if (row, column).eq(&self.target) {
-                    format!("{style}矢{style:#}")
+                    format!("{style}END{style:#}")
                 } else {
                     match block {
-                        None => "\u{3000}".to_string(),
+                        None => "   ".to_string(),
                         Some(block) => block.to_string(),
                     }
                 })
