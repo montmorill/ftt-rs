@@ -201,7 +201,7 @@ fn main() -> Result<()> {
 
             if output.json || output.file.is_some() {
                 let json = serde_json::to_string(&ftt)?;
-                let json = format!("//seed: {seed}\n{json}");
+                let json = format!("// seed: {seed}\n{json}");
                 if output.json {
                     println!("{json}");
                 }
