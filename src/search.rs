@@ -8,7 +8,7 @@ use std::{
 /// Search for one of shortest possible solutions
 pub fn search(
     ftt: FttMap,
-    max_steps: usize,
+    max_step: usize,
     debug: bool,
 ) -> Option<Vec<Direction>> {
     let timer = Instant::now();
@@ -44,7 +44,7 @@ pub fn search(
                     }
                     return Some(steps.to_vec());
                 }
-                if steps.len() <= max_steps && !hash_set.contains(&ftt) {
+                if steps.len() <= max_step && !hash_set.contains(&ftt) {
                     hash_set.insert(ftt.clone());
                     queue.push_back((ftt, steps.clone()));
                 }

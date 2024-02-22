@@ -39,7 +39,7 @@ enum Commands {
         map: Map,
         /// Maximum steps to limit
         #[arg(long)]
-        max_steps: Option<u8>,
+        max_step: Option<u8>,
     },
     /// Simulate a solution
     Simulate {
@@ -66,10 +66,10 @@ struct Config {
     blocks: Option<String>,
     /// Minimum steps to limit
     #[arg(long)]
-    min_steps: Option<u8>,
+    min_step: Option<u8>,
     /// Maximum steps to limit
     #[arg(long)]
-    max_steps: Option<u8>,
+    max_step: Option<u8>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
@@ -79,7 +79,6 @@ enum Preset {
 }
 
 #[derive(Args)]
-#[group(multiple = false)]
 struct Output {
     /// Output in JSON format
     #[arg(long)]
@@ -100,7 +99,7 @@ struct Pipe {
 }
 
 #[derive(Args)]
-#[group(multiple = false)]
+#[group(required = true, multiple = false)]
 struct Map {
     /// Map is JSON format
     #[arg(long)]
@@ -122,8 +121,8 @@ struct GenerateConfig {
     width: usize,
     height: usize,
     blocks: Vec<(Block, f64)>,
-    min_steps: usize,
-    max_steps: usize,
+    min_step: usize,
+    max_step: usize,
 }
 
 fn main() -> Result<()> {
@@ -145,8 +144,8 @@ fn main() -> Result<()> {
                         (Block::Wall, 2.0 / 15.0),
                         (Block::Piston, 1.0 / 15.0),
                     ],
-                    min_steps: 4,
-                    max_steps: 10,
+                    min_step: 4,
+                    max_step: 10,
                 },
                 Preset::Normal => GenerateConfig {
                     width: 12,
@@ -157,8 +156,8 @@ fn main() -> Result<()> {
                         (Block::Sand, 0.1),
                         (Block::Cobweb, 0.1),
                     ],
-                    min_steps: 4,
-                    max_steps: 13,
+                    min_step: 4,
+                    max_step: 13,
                 },
             };
 
@@ -173,11 +172,11 @@ fn main() -> Result<()> {
                     generate_config.blocks =
                         serde_json::from_str(&blocks.replace("'", "\""))?
                 };
-                if let Some(min_steps) = config.min_steps {
-                    generate_config.min_steps = min_steps as usize;
+                if let Some(min_step) = config.min_step {
+                    generate_config.min_step = min_step as usize;
                 }
-                if let Some(max_steps) = config.max_steps {
-                    generate_config.max_steps = max_steps as usize;
+                if let Some(max_step) = config.max_step {
+                    generate_config.max_step = max_step as usize;
                 }
             }
 
@@ -185,8 +184,8 @@ fn main() -> Result<()> {
                 width,
                 height,
                 blocks,
-                min_steps,
-                max_steps,
+                min_step,
+                max_step,
             } = generate_config;
 
             let mut maps = 0;
@@ -194,8 +193,8 @@ fn main() -> Result<()> {
                 maps += 1;
                 let (ftt, seed) = generate(width, height, &blocks, seed)?;
                 // println!("{ftt}");
-                let steps = search(ftt.clone(), max_steps, false);
-                if steps.clone().unwrap_or_default().len() >= min_steps {
+                let steps = search(ftt.clone(), max_step, false);
+                if steps.clone().unwrap_or_default().len() >= min_step {
                     break (ftt, seed, steps);
                 }
             };
@@ -203,9 +202,11 @@ fn main() -> Result<()> {
             if output.json || output.file.is_some() {
                 let json = serde_json::to_string(&ftt)?;
                 let json = format!("//seed: {seed}\n{json}");
-                match output.file {
-                    Some(file) => fs::write(file, json)?,
-                    None => println!("{json}"),
+                if output.json {
+                    println!("{json}");
+                }
+                if let Some(file) = output.file {
+                    fs::write(file, json)?;
                 }
             } else {
                 println!(
@@ -221,7 +222,7 @@ fn main() -> Result<()> {
             if pipe.search {
                 let steps = steps
                     .clone()
-                    .or_else(|| search(ftt.clone(), max_steps, true));
+                    .or_else(|| search(ftt.clone(), max_step, true));
                 match steps.clone() {
                     Some(steps) => println!("A possible solution: {steps:?}"),
                     None => println!("No solution!"),
@@ -252,10 +253,10 @@ fn main() -> Result<()> {
             }
         }
 
-        Commands::Search { map, max_steps } => {
+        Commands::Search { map, max_step } => {
             let map = parse_map(map)?;
-            let max_steps = max_steps.unwrap_or(u8::MAX);
-            let steps = search(map, max_steps as usize, true);
+            let max_step = max_step.unwrap_or(u8::MAX);
+            let steps = search(map, max_step as usize, true);
             match steps {
                 Some(steps) => println!("A possible solution: {steps:?}"),
                 None => println!("No solution!"),
