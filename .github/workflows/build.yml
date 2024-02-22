@@ -14,17 +14,20 @@ jobs:
             os: ubuntu-latest
             rust: nightly
             target: x86_64-unknown-linux-musl
-            archive-name: ftt-linux.tar.gz
+            archive-name: ftt-linux
+            file-name: ftt
           - build: macos
             os: macos-latest
             rust: nightly
             target: x86_64-apple-darwin
-            archive-name: ftt-macos.tar.gz
+            archive-name: ftt-macos
+            file-name: ftt
           - build: windows
             os: windows-latest
             rust: nightly-x86_64-msvc
             target: x86_64-pc-windows-msvc
-            archive-name: ftt-windows.7z
+            archive-name: ftt-windows.exe
+            file-name: ftt.exe
       fail-fast: false
 
     steps:
@@ -48,21 +51,8 @@ jobs:
         if: matrix.build == 'linux' || matrix.build == 'macos'
         run: strip "target/${{ matrix.target }}/release/ftt"
 
-      - name: Build archive
-        shell: bash
-        run: |
-          mkdir archive
-          cp LICENSE archive/
-          cd archive
-          if [ "${{ matrix.build }}" = "windows" ]; then
-            cp "../target/${{ matrix.target }}/release/ftt.exe" ./
-            7z a "${{ matrix.archive-name }}" LICENSE ftt.exe
-          else
-            cp "../target/${{ matrix.target }}/release/ftt" ./
-            tar -czf "${{ matrix.archive-name }}" LICENSE ftt
-          fi
       - name: Upload archive
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.archive-name }}
-          path: archive/${{ matrix.archive-name }}
+          path: ./target/${{ matrix.target }}/release/${{ matrix.file-name }}
